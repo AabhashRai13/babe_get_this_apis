@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Babe, Get This — API tester</title>
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      max-width: 640px; margin: 40px auto; padding: 0 20px; line-height: 1.5;
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 0.2rem; }
+    .sub { opacity: 0.65; margin-top: 0; font-size: 0.9rem; }
+    .card {
+      border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+      border-radius: 12px; padding: 18px; margin: 18px 0;
+    }
+    h2 { font-size: 1rem; margin: 0 0 12px; }
+    label { display: block; font-size: 0.85rem; opacity: 0.8; margin-bottom: 6px; }
+    input[type=file] { width: 100%; margin-bottom: 12px; }
+    button {
+      font: inherit; font-weight: 600; cursor: pointer;
+      padding: 9px 16px; border-radius: 8px; border: 0;
+      background: #4f46e5; color: #fff;
+    }
+    button:disabled { opacity: 0.5; cursor: default; }
+    button.ghost { background: transparent; border: 1px solid currentColor; color: inherit; }
+    pre {
+      background: color-mix(in srgb, currentColor 8%, transparent);
+      padding: 12px; border-radius: 8px; overflow: auto;
+      font-size: 0.85rem; white-space: pre-wrap; word-break: break-word; min-height: 1.5em;
+    }
+    .pill { font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; }
+    .ok { background: #16a34a22; color: #16a34a; }
+    .err { background: #dc262622; color: #dc2626; }
+    ul.items { margin: 8px 0 0; padding-left: 18px; }
+    ul.items li { margin: 2px 0; }
+  </style>
+</head>
+<body>
+  <h1>Babe, Get This — API tester</h1>
+  <p class="sub">Hits this server's endpoints. Same origin, so no CORS setup needed.</p>
+
+  <div class="card">
+    <h2>GET /health <span id="healthPill" class="pill"></span></h2>
+    <button id="healthBtn">Check health</button>
+    <pre id="healthOut">—</pre>
+  </div>
+
+  <div class="card">
+    <h2>POST /transcribe <span id="trPill" class="pill"></span></h2>
+    <label for="audio">Audio file (field name: <code>audio</code>)</label>
+    <input type="file" id="audio" accept="audio/*" />
+    <p class="sub" style="margin-top:-6px">
+      Note: the STT service is stubbed, so any file returns the same canned result for now.
+    </p>
+    <button id="trBtn">Upload &amp; transcribe</button>
+    <div id="itemsBox"></div>
+    <pre id="trOut">—</pre>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    function setPill(el, ok, text) {
+      el.className = "pill " + (ok ? "ok" : "err");
+      el.textContent = text;
+    }
+
+    $("healthBtn").addEventListener("click", async () => {
+      $("healthOut").textContent = "Loading…";
+      try {
+        const res = await fetch("/health");
+        const data = await res.json();
+        setPill($("healthPill"), res.ok, res.status + "");
+        $("healthOut").textContent = JSON.stringify(data, null, 2);
+      } catch (e) {
+        setPill($("healthPill"), false, "error");
+        $("healthOut").textContent = String(e);
+      }
+    });
+
+    $("trBtn").addEventListener("click", async () => {
+      const file = $("audio").files[0];
+      $("itemsBox").innerHTML = "";
+      if (!file) { $("trOut").textContent = "Pick a file first."; return; }
+
+      const btn = $("trBtn");
+      btn.disabled = true;
+      $("trOut").textContent = "Uploading…";
+
+      const form = new FormData();
+      form.append("audio", file);
+
+      try {
+        const res = await fetch("/transcribe", { method: "POST", body: form });
+        const data = await res.json();
+        setPill($("trPill"), res.ok, res.status + "");
+        $("trOut").textContent = JSON.stringify(data, null, 2);
+
+        if (res.ok && Array.isArray(data.items)) {
+          const lis = data.items
+            .map((i) => `<li>${i.quantity} ${i.unit} ${i.name}</li>`)
+            .join("");
+          $("itemsBox").innerHTML =
+            `<strong>Transcript:</strong> ${data.transcript}<ul class="items">${lis}</ul>`;
+        }
+      } catch (e) {
+        setPill($("trPill"), false, "error");
+        $("trOut").textContent = String(e);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

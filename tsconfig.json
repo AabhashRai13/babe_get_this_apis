@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    // Modern Node + ESM. NodeNext is why relative imports keep a `.js`
+    // extension even though the files are `.ts` — TS resolves them correctly
+    // and the emitted JS imports the real `.js` file. (Quirk to just accept.)
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
+    // Output: compile src/*.ts -> dist/*.js (used by `npm run build` / `start`).
+    "rootDir": "src",
+    "outDir": "dist",
+
+    // Type-safety. `strict` is the Dart-like "null safety on" switch.
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "declaration": false
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}
