@@ -34,6 +34,7 @@ const ITEMS_SCHEMA = {
   additionalProperties: false,
 };
 
+// TODO(AR) : It will be great if api could also return the category and notes
 const SYSTEM_PROMPT = [
   "You extract grocery items from a shopping voice-note transcript.",
   "Return each item with a name, a numeric quantity, and a unit (use \"\" if none).",
