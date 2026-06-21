@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import { transcribeAudio } from "../services/stt.service.js";
+import { transcribeAudio } from "../services/transcription.service.js";
 import { parseItems } from "../services/claude.service.js";
 import type { TranscribeResponse } from "../dtos/transcribe.dto.js";
 
@@ -16,7 +16,11 @@ export async function transcribe(
       return;
     }
 
-    const transcript = await transcribeAudio(req.file.buffer, req.file.mimetype);
+    const transcript = await transcribeAudio(
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype,
+    );
     const items = await parseItems(transcript);
 
     res.json({ transcript, items });

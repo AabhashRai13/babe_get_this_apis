@@ -23,6 +23,19 @@ npm run dev            # tsx watch — runs src/*.ts directly, auto-reload, http
 - `npm run build` — compile `src/*.ts` → `dist/*.js`
 - `npm start` — run the compiled output (`dist/server.js`); used in deploy
 
+## Environments
+Controlled by `NODE_ENV` (default `development`):
+
+| | development | production |
+|---|---|---|
+| Required keys | optional (errors on use) | **required at startup** — won't boot without them |
+| Test page (`GET /`) | served | disabled |
+| Error responses | full message | generic for 5xx; 4xx still detailed |
+| `trust proxy` | off | on |
+
+In production, set real env vars in the host dashboard (e.g. Render) — never
+commit a `.env`. `staging` is supported as a value but unused for now.
+
 ## Endpoints
 - `GET /health` → `{ "status": "ok" }`
 - `POST /transcribe` — multipart form-data, field `audio` (a voice recording)
