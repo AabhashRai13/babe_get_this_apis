@@ -1,6 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { config } from "../config/env.js";
-import { ITEM_CATEGORIES, type ShoppingItem } from "../dtos/transcribe.dto.js";
+import {
+  CATEGORY_LABELS,
+  ITEM_CATEGORIES,
+  type ItemCategory,
+  type ShoppingItem,
+} from "../dtos/transcribe.dto.js";
 
 let client: Anthropic | undefined;
 
@@ -61,5 +66,6 @@ export async function parseItems(transcript: string): Promise<ShoppingItem[]> {
   if (block?.type !== "text") {
     throw new Error("Claude returned no text content");
   }
-  return (JSON.parse(block.text) as { items: ShoppingItem[] }).items;
+  const raw = (JSON.parse(block.text) as { items: (Omit<ShoppingItem, "category"> & { category: ItemCategory })[] }).items;
+  return raw.map((item) => ({ ...item, category: CATEGORY_LABELS[item.category] }));
 }
