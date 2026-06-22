@@ -1,6 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { config } from "../config/env.js";
-import type { ShoppingItem } from "../dtos/transcribe.dto.js";
+import {
+  CATEGORY_LABELS,
+  ITEM_CATEGORIES,
+  type ItemCategory,
+  type ShoppingItem,
+} from "../dtos/transcribe.dto.js";
 
 let client: Anthropic | undefined;
 
@@ -22,10 +27,13 @@ const ITEMS_SCHEMA = {
         type: "object",
         properties: {
           name: { type: "string" },
-          quantity: { type: "number" },
-          unit: { type: "string" },
+          // Union with "null" = always present, value may be null (unspecified).
+          quantity: { type: ["number", "null"] },
+          unit: { type: ["string", "null"] },
+          category: { type: "string", enum: [...ITEM_CATEGORIES] },
+          note: { type: ["string", "null"] },
         },
-        required: ["name", "quantity", "unit"],
+        required: ["name", "quantity", "unit", "category", "note"],
         additionalProperties: false,
       },
     },
@@ -34,10 +42,13 @@ const ITEMS_SCHEMA = {
   additionalProperties: false,
 };
 
-// TODO(AR) : It will be great if api could also return the category and notes
 const SYSTEM_PROMPT = [
   "You extract grocery items from a shopping voice-note transcript.",
-  "Return each item with a name, a numeric quantity, and a unit (use \"\" if none).",
+  "For each item return: name; quantity (a number, or null if unspecified — never invent one);",
+  'unit (e.g. "litre", "kg", or null if none);',
+  `category (one of: ${ITEM_CATEGORIES.join(", ")}; use "other" if unsure);`,
+  'and note (preferences, conditions, or substitutions only — e.g. "cage-free",',
+  '"skip if unavailable" — or null if none; never restate the item name).',
   "Fix obvious speech-to-text errors using grocery context",
   '(e.g. "protein sake" → "protein shake", "to litres" → 2 litres).',
 ].join(" ");
@@ -55,5 +66,6 @@ export async function parseItems(transcript: string): Promise<ShoppingItem[]> {
   if (block?.type !== "text") {
     throw new Error("Claude returned no text content");
   }
-  return (JSON.parse(block.text) as { items: ShoppingItem[] }).items;
+  const raw = (JSON.parse(block.text) as { items: (Omit<ShoppingItem, "category"> & { category: ItemCategory })[] }).items;
+  return raw.map((item) => ({ ...item, category: CATEGORY_LABELS[item.category] }));
 }

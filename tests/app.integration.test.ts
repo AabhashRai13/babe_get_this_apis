@@ -50,10 +50,10 @@ describe("POST /transcribe", () => {
   });
 
   it("transcribes and parses a valid audio upload", async () => {
-    mockTranscribe.mockResolvedValue("two litres of milk and protein shake");
+    mockTranscribe.mockResolvedValue("two litres of milk and cage free eggs");
     mockParse.mockResolvedValue([
-      { name: "milk", quantity: 2, unit: "litres" },
-      { name: "protein shake", quantity: 1, unit: "" },
+      { name: "milk", quantity: 2, unit: "litres", category: "dairy", note: null },
+      { name: "eggs", quantity: 12, unit: "", category: "dairy", note: "Cage-free" },
     ]);
 
     const res = await request(app)
@@ -64,12 +64,42 @@ describe("POST /transcribe", () => {
       });
 
     expect(res.status).toBe(200);
-    expect(res.body.transcript).toBe("two litres of milk and protein shake");
+    expect(res.body.transcript).toBe("two litres of milk and cage free eggs");
     expect(res.body.items).toHaveLength(2);
+    expect(res.body.items[1].note).toBe("Cage-free");
     expect(mockTranscribe).toHaveBeenCalledOnce();
     expect(mockParse).toHaveBeenCalledWith(
-      "two litres of milk and protein shake",
+      "two litres of milk and cage free eggs",
     );
+  });
+
+  it("preserves null quantity/unit and a note through JSON serialization", async () => {
+    mockTranscribe.mockResolvedValue("sweet yogurt, skip if there is no sweet one");
+    mockParse.mockResolvedValue([
+      {
+        name: "yogurt",
+        quantity: null,
+        unit: null,
+        category: "dairy",
+        note: "Sweet, not sour — skip if unavailable",
+      },
+    ]);
+
+    const res = await request(app)
+      .post("/transcribe")
+      .attach("audio", Buffer.from("fake audio bytes"), {
+        filename: "note.m4a",
+        contentType: "audio/m4a",
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.items[0]).toEqual({
+      name: "yogurt",
+      quantity: null,
+      unit: null,
+      category: "dairy",
+      note: "Sweet, not sour — skip if unavailable",
+    });
   });
 
   it("returns a 500 error shape when a service throws", async () => {
