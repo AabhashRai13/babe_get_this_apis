@@ -20,6 +20,11 @@
     h2 { font-size: 1rem; margin: 0 0 12px; }
     label { display: block; font-size: 0.85rem; opacity: 0.8; margin-bottom: 6px; }
     input[type=file] { width: 100%; margin-bottom: 12px; }
+    input[type=email], input[type=password] {
+      font: inherit; width: 100%; margin-bottom: 12px; padding: 8px 10px;
+      border-radius: 8px; border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+      background: transparent; color: inherit;
+    }
     button {
       font: inherit; font-weight: 600; cursor: pointer;
       padding: 9px 16px; border-radius: 8px; border: 0;
@@ -44,6 +49,17 @@
   <p class="sub">Hits this server's endpoints. Same origin, so no CORS setup needed.</p>
 
   <div class="card">
+    <h2>Auth <span id="authPill" class="pill"></span></h2>
+    <label for="email">Email</label>
+    <input type="email" id="email" autocomplete="username" />
+    <label for="password">Password</label>
+    <input type="password" id="password" autocomplete="current-password" />
+    <button id="loginBtn">Log in</button>
+    <button id="logoutBtn" class="ghost">Log out</button>
+    <pre id="authOut">Not signed in.</pre>
+  </div>
+
+  <div class="card">
     <h2>GET /health <span id="healthPill" class="pill"></span></h2>
     <button id="healthBtn">Check health</button>
     <pre id="healthOut">—</pre>
@@ -61,13 +77,47 @@
     <pre id="trOut">—</pre>
   </div>
 
-  <script>
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
     const $ = (id) => document.getElementById(id);
 
     function setPill(el, ok, text) {
       el.className = "pill " + (ok ? "ok" : "err");
       el.textContent = text;
     }
+
+    // Anon key + URL come from the dev-only /config endpoint, never hardcoded.
+    const cfg = await (await fetch("/config")).json();
+    const supabase = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+    async function refreshAuthUI() {
+      const { data } = await supabase.auth.getSession();
+      const user = data.session?.user;
+      setPill($("authPill"), !!user, user ? "signed in" : "signed out");
+      $("authOut").textContent = user ? `Logged in as ${user.email}` : "Not signed in.";
+    }
+
+    $("loginBtn").addEventListener("click", async () => {
+      $("authOut").textContent = "Signing in…";
+      const { error } = await supabase.auth.signInWithPassword({
+        email: $("email").value,
+        password: $("password").value,
+      });
+      if (error) {
+        setPill($("authPill"), false, "error");
+        $("authOut").textContent = error.message;
+        return;
+      }
+      await refreshAuthUI();
+    });
+
+    $("logoutBtn").addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      await refreshAuthUI();
+    });
+
+    await refreshAuthUI();
 
     $("healthBtn").addEventListener("click", async () => {
       $("healthOut").textContent = "Loading…";
@@ -91,11 +141,18 @@
       btn.disabled = true;
       $("trOut").textContent = "Uploading…";
 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { $("trOut").textContent = "Log in first."; btn.disabled = false; return; }
+
       const form = new FormData();
       form.append("audio", file);
 
       try {
-        const res = await fetch("/transcribe", { method: "POST", body: form });
+        const res = await fetch("/transcribe", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          body: form,
+        });
         const data = await res.json();
         setPill($("trPill"), res.ok, res.status + "");
         $("trOut").textContent = JSON.stringify(data, null, 2);

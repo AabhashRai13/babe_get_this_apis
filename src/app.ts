@@ -23,6 +23,14 @@ export function createApp(): Express {
   // The browser test page is a dev convenience — not exposed in production.
   if (!config.isProduction) {
     app.use(express.static("public"));
+    // Lets the test page log in via in-browser supabase-js. Anon key is
+    // publishable, so this only exposes browser-safe values, dev-only.
+    app.get("/config", (_req, res) => {
+      res.json({
+        supabaseUrl: config.supabaseUrl,
+        supabaseAnonKey: config.supabaseAnonKey,
+      });
+    });
   }
 
   app.get("/health", (_req, res) => {

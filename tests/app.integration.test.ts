@@ -8,17 +8,30 @@ vi.mock("../src/services/transcription.service.js", () => ({
 vi.mock("../src/services/claude.service.js", () => ({
   parseItems: vi.fn(),
 }));
+// Mock Supabase so the protected route runs without a live Supabase.
+vi.mock("../src/services/supabase.js", () => ({
+  supabase: { auth: { getUser: vi.fn() } },
+}));
 
 import { createApp } from "../src/app.js";
+import { supabase } from "../src/services/supabase.js";
 import { transcribeAudio } from "../src/services/transcription.service.js";
 import { parseItems } from "../src/services/claude.service.js";
 
 const app = createApp();
 const mockTranscribe = vi.mocked(transcribeAudio);
 const mockParse = vi.mocked(parseItems);
+const mockGetUser = vi.mocked(supabase.auth.getUser);
+
+const AUTH = "Bearer test-token";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Default: every request is authenticated unless a test overrides it.
+  mockGetUser.mockResolvedValue({
+    data: { user: { id: "uuid-1", email: "test@example.com" } },
+    error: null,
+  } as never);
 });
 
 describe("GET /health", () => {
@@ -30,8 +43,22 @@ describe("GET /health", () => {
 });
 
 describe("POST /transcribe", () => {
+  it("returns 401 without an Authorization header, before parsing the body", async () => {
+    const res = await request(app)
+      .post("/transcribe")
+      .attach("audio", Buffer.from("fake audio bytes"), {
+        filename: "note.m4a",
+        contentType: "audio/m4a",
+      });
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ error: "Unauthorized" });
+    expect(mockTranscribe).not.toHaveBeenCalled();
+  });
+
   it("returns 400 when no file is uploaded", async () => {
-    const res = await request(app).post("/transcribe");
+    const res = await request(app)
+      .post("/transcribe")
+      .set("Authorization", AUTH);
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/no audio uploaded/i);
     expect(mockTranscribe).not.toHaveBeenCalled();
@@ -40,6 +67,7 @@ describe("POST /transcribe", () => {
   it("rejects a non-audio upload with 400", async () => {
     const res = await request(app)
       .post("/transcribe")
+      .set("Authorization", AUTH)
       .attach("audio", Buffer.from("not audio"), {
         filename: "notes.txt",
         contentType: "text/plain",
@@ -58,6 +86,7 @@ describe("POST /transcribe", () => {
 
     const res = await request(app)
       .post("/transcribe")
+      .set("Authorization", AUTH)
       .attach("audio", Buffer.from("fake audio bytes"), {
         filename: "note.m4a",
         contentType: "audio/m4a",
@@ -87,6 +116,7 @@ describe("POST /transcribe", () => {
 
     const res = await request(app)
       .post("/transcribe")
+      .set("Authorization", AUTH)
       .attach("audio", Buffer.from("fake audio bytes"), {
         filename: "note.m4a",
         contentType: "audio/m4a",
@@ -107,6 +137,7 @@ describe("POST /transcribe", () => {
 
     const res = await request(app)
       .post("/transcribe")
+      .set("Authorization", AUTH)
       .attach("audio", Buffer.from("fake audio bytes"), {
         filename: "note.m4a",
         contentType: "audio/m4a",
