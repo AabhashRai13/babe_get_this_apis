@@ -3,7 +3,6 @@ import { config } from "../config/env.js";
 import {
   CATEGORY_LABELS,
   ITEM_CATEGORIES,
-  type ItemCategory,
   type ShoppingItem,
 } from "../dtos/transcribe.dto.js";
 
@@ -46,7 +45,7 @@ const SYSTEM_PROMPT = [
   "You extract grocery items from a shopping voice-note transcript.",
   "For each item return: name; quantity (a number, or null if unspecified — never invent one);",
   'unit (e.g. "litre", "kg", or null if none);',
-  `category (one of: ${ITEM_CATEGORIES.join(", ")}; use "other" if unsure);`,
+  `category (the matching category id, one of: ${ITEM_CATEGORIES.map((id) => `${id} (${CATEGORY_LABELS[id]})`).join(", ")}; pick the closest, or cat-pantry-dry-goods if none fit);`,
   'and note (preferences, conditions, or substitutions only — e.g. "cage-free",',
   '"skip if unavailable" — or null if none; never restate the item name).',
   "Fix obvious speech-to-text errors using grocery context",
@@ -66,6 +65,5 @@ export async function parseItems(transcript: string): Promise<ShoppingItem[]> {
   if (block?.type !== "text") {
     throw new Error("Claude returned no text content");
   }
-  const raw = (JSON.parse(block.text) as { items: (Omit<ShoppingItem, "category"> & { category: ItemCategory })[] }).items;
-  return raw.map((item) => ({ ...item, category: CATEGORY_LABELS[item.category] }));
+  return (JSON.parse(block.text) as { items: ShoppingItem[] }).items;
 }
