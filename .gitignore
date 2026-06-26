@@ -5,3 +5,8 @@ dist/
 .DS_Store
 NOTES.md
 RULES.md
+
+# Agent / local tooling
+.claude/
+.codex/
+openspec/
