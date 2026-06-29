@@ -1,0 +1,151 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import request from "supertest";
+
+// Mock the paid external services so tests never hit Groq or Claude.
+vi.mock("../src/services/transcription.service.js", () => ({
+  transcribeAudio: vi.fn(),
+}));
+vi.mock("../src/services/claude.service.js", () => ({
+  parseItems: vi.fn(),
+}));
+// Mock Supabase so the protected route runs without a live Supabase.
+vi.mock("../src/services/supabase.js", () => ({
+  supabase: { auth: { getUser: vi.fn() } },
+}));
+
+import { createApp } from "../src/app.js";
+import { supabase } from "../src/services/supabase.js";
+import { transcribeAudio } from "../src/services/transcription.service.js";
+import { parseItems } from "../src/services/claude.service.js";
+
+const app = createApp();
+const mockTranscribe = vi.mocked(transcribeAudio);
+const mockParse = vi.mocked(parseItems);
+const mockGetUser = vi.mocked(supabase.auth.getUser);
+
+const AUTH = "Bearer test-token";
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  // Default: every request is authenticated unless a test overrides it.
+  mockGetUser.mockResolvedValue({
+    data: { user: { id: "uuid-1", email: "test@example.com" } },
+    error: null,
+  } as never);
+});
+
+describe("GET /health", () => {
+  it("returns ok", async () => {
+    const res = await request(app).get("/health");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: "ok" });
+  });
+});
+
+describe("POST /transcribe", () => {
+  it("returns 401 without an Authorization header, before parsing the body", async () => {
+    const res = await request(app)
+      .post("/transcribe")
+      .attach("audio", Buffer.from("fake audio bytes"), {
+        filename: "note.m4a",
+        contentType: "audio/m4a",
+      });
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ error: "Unauthorized" });
+    expect(mockTranscribe).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when no file is uploaded", async () => {
+    const res = await request(app)
+      .post("/transcribe")
+      .set("Authorization", AUTH);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/no audio uploaded/i);
+    expect(mockTranscribe).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-audio upload with 400", async () => {
+    const res = await request(app)
+      .post("/transcribe")
+      .set("Authorization", AUTH)
+      .attach("audio", Buffer.from("not audio"), {
+        filename: "notes.txt",
+        contentType: "text/plain",
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/only audio uploads are allowed/i);
+    expect(mockTranscribe).not.toHaveBeenCalled();
+  });
+
+  it("transcribes and parses a valid audio upload", async () => {
+    mockTranscribe.mockResolvedValue("two litres of milk and cage free eggs");
+    mockParse.mockResolvedValue([
+      { name: "milk", quantity: 2, unit: "litres", category: "dairy", note: null },
+      { name: "eggs", quantity: 12, unit: "", category: "dairy", note: "Cage-free" },
+    ]);
+
+    const res = await request(app)
+      .post("/transcribe")
+      .set("Authorization", AUTH)
+      .attach("audio", Buffer.from("fake audio bytes"), {
+        filename: "note.m4a",
+        contentType: "audio/m4a",
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.transcript).toBe("two litres of milk and cage free eggs");
+    expect(res.body.items).toHaveLength(2);
+    expect(res.body.items[1].note).toBe("Cage-free");
+    expect(mockTranscribe).toHaveBeenCalledOnce();
+    expect(mockParse).toHaveBeenCalledWith(
+      "two litres of milk and cage free eggs",
+    );
+  });
+
+  it("preserves null quantity/unit and a note through JSON serialization", async () => {
+    mockTranscribe.mockResolvedValue("sweet yogurt, skip if there is no sweet one");
+    mockParse.mockResolvedValue([
+      {
+        name: "yogurt",
+        quantity: null,
+        unit: null,
+        category: "dairy",
+        note: "Sweet, not sour — skip if unavailable",
+      },
+    ]);
+
+    const res = await request(app)
+      .post("/transcribe")
+      .set("Authorization", AUTH)
+      .attach("audio", Buffer.from("fake audio bytes"), {
+        filename: "note.m4a",
+        contentType: "audio/m4a",
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.items[0]).toEqual({
+      name: "yogurt",
+      quantity: null,
+      unit: null,
+      category: "dairy",
+      note: "Sweet, not sour — skip if unavailable",
+    });
+  });
+
+  it("returns a 500 error shape when a service throws", async () => {
+    mockTranscribe.mockRejectedValue(new Error("Groq exploded"));
+
+    const res = await request(app)
+      .post("/transcribe")
+      .set("Authorization", AUTH)
+      .attach("audio", Buffer.from("fake audio bytes"), {
+        filename: "note.m4a",
+        contentType: "audio/m4a",
+      });
+
+    expect(res.status).toBe(500);
+    expect(res.body).toHaveProperty("error");
+    // Dev/test mode exposes the real message; production hides it (see errorHandler test).
+    expect(res.body.error).toBe("Groq exploded");
+  });
+});

@@ -11,4 +11,9 @@ RULES.md
 .codex/
 openspec/
 demo_audio/
-doc/brainstorm/ideas.md
+doc/brainstorm/
+
+# Generated eval reports + cache (keep cases.json + run.ts, ignore the output)
+eval/report.json
+eval/report.md
+eval/raw.json

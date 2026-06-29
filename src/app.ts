@@ -1,14 +1,37 @@
 import express, { type Express } from "express";
+import helmet from "helmet";
+import { config } from "./config/env.js";
+import { apiLimiter } from "./middleware/rateLimit.js";
 import transcribeRoutes from "./routes/transcribe.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 export function createApp(): Express {
   const app = express();
 
+  // Render (and most hosts) sit behind a proxy; trust it so rate limiting and
+  // logging see the real client IP.
+  if (config.isProduction) {
+    app.set("trust proxy", 1);
+  }
+
+  // CSP disabled so the inline-script test page still works; other security
+  // headers (HSTS, no-sniff, frameguard, etc.) stay on.
+  app.use(helmet({ contentSecurityPolicy: false }));
+  app.use(apiLimiter);
   app.use(express.json());
 
-  // Serves the test page at GET / from the public/ folder.
-  app.use(express.static("public"));
+  // The browser test page is a dev convenience — not exposed in production.
+  if (!config.isProduction) {
+    app.use(express.static("public"));
+    // Lets the test page log in via in-browser supabase-js. Anon key is
+    // publishable, so this only exposes browser-safe values, dev-only.
+    app.get("/config", (_req, res) => {
+      res.json({
+        supabaseUrl: config.supabaseUrl,
+        supabaseAnonKey: config.supabaseAnonKey,
+      });
+    });
+  }
 
   app.get("/health", (_req, res) => {
     res.json({ status: "ok" });
