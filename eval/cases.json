@@ -1,0 +1,145 @@
+{
+  "_comment": "Ground truth, in lockstep with scripts/make-demo-audio.sh (phrase N -> demoN.m4a). Each case: audio (file in demo_audio/) OR text (skip Whisper, test extraction only). expected lists items; ONLY the fields you put here are checked, so omit anything debatable (vague quantity, fuzzy category, unlisted store). location:null is checked; an omitted location is not. Adjust to YOUR intended answer.",
+  "cases": [
+    {
+      "audio": "demo1.m4a",
+      "expected": [
+        { "name": "beer", "quantity": 6, "unit": "pack", "category": "cat-beverages", "location": "Dan Murphy's" },
+        { "name": "soju", "quantity": 2, "unit": "bottle", "category": "cat-beverages", "location": "Dan Murphy's" }
+      ]
+    },
+    {
+      "audio": "demo2.m4a",
+      "expected": [
+        { "name": "pork", "category": "cat-meat-seafood", "location": "Woolworths" },
+        { "name": "chicken", "category": "cat-meat-seafood", "location": "Woolworths" },
+        { "name": "eggs", "quantity": 12, "category": "cat-dairy-eggs", "location": "Woolworths", "note": "cage free" },
+        { "name": "milk", "quantity": 2, "unit": "litre", "category": "cat-dairy-eggs", "location": "Woolworths" }
+      ]
+    },
+    {
+      "audio": "demo3.m4a",
+      "expected": [
+        { "name": "chicken feet", "category": "cat-meat-seafood", "location": null, "note": "aisle 4" },
+        { "name": "dog food", "category": "cat-pet-supplies", "location": "Petbarn", "note": "cheap" }
+      ]
+    },
+    {
+      "audio": "demo4.m4a",
+      "expected": [
+        { "name": "protein shake", "location": "Chemist Warehouse" },
+        { "name": "bread", "category": "cat-bakery-bread", "location": null, "note": "skip if unavailable" },
+        { "name": "bananas", "category": "cat-fruits-vegetables", "location": null }
+      ]
+    },
+    {
+      "audio": "demo5.m4a",
+      "expected": [
+        { "name": "avocado", "category": "cat-fruits-vegetables", "location": "Harris Farm", "note": "ripe" }
+      ]
+    },
+    {
+      "audio": "demo6.m4a",
+      "expected": [
+        { "name": "nappies", "category": "cat-baby-kids", "location": "Big W" },
+        { "name": "baby wipes", "category": "cat-baby-kids", "location": "Big W" }
+      ]
+    },
+    {
+      "audio": "demo7.m4a",
+      "expected": [
+        { "name": "prawns", "category": "cat-meat-seafood", "location": "fishmonger" },
+        { "name": "lemons", "category": "cat-fruits-vegetables", "location": null }
+      ]
+    },
+    {
+      "audio": "demo8.m4a",
+      "expected": [
+        { "name": "sourdough", "quantity": 2, "category": "cat-bakery-bread", "location": "bakery", "note": "top shelf" }
+      ]
+    },
+    {
+      "audio": "demo9.m4a",
+      "expected": [
+        { "name": "shiraz", "unit": "bottle", "category": "cat-beverages", "location": "Dan Murphy's" },
+        { "name": "ice" }
+      ]
+    },
+    {
+      "audio": "demo10.m4a",
+      "expected": [
+        { "name": "toilet paper", "quantity": 24, "unit": "roll", "category": "cat-household-cleaning", "location": "Coles" },
+        { "name": "dish soap", "category": "cat-household-cleaning", "location": "Coles" }
+      ]
+    },
+    {
+      "audio": "demo11.m4a",
+      "expected": [
+        { "name": "thyme", "location": "Woolworths", "note": "fresh" },
+        { "name": "basil", "location": "Woolworths", "note": "fresh" }
+      ]
+    },
+    {
+      "audio": "demo12.m4a",
+      "expected": [
+        { "name": "hot cross buns", "quantity": 12, "category": "cat-bakery-bread", "location": "bakery" },
+        { "name": "butter", "category": "cat-dairy-eggs", "location": null }
+      ]
+    },
+    {
+      "audio": "demo13.m4a",
+      "expected": [
+        { "name": "flour", "quantity": 2, "unit": "kg", "category": "cat-pantry-dry-goods", "location": "Aldi", "note": "plain" }
+      ]
+    },
+    {
+      "audio": "demo14.m4a",
+      "expected": [
+        { "name": "cat litter", "category": "cat-pet-supplies", "location": "PetStock" },
+        { "name": "fish", "category": "cat-meat-seafood", "location": "deli" }
+      ]
+    },
+    {
+      "audio": "demo15.m4a",
+      "expected": [
+        { "name": "coconut milk", "location": null, "note": "asian aisle" },
+        { "name": "rice", "category": "cat-pantry-dry-goods", "location": null }
+      ]
+    },
+    {
+      "audio": "demo16.m4a",
+      "expected": [
+        { "name": "leek", "category": "cat-fruits-vegetables", "location": null, "note": "near the back" },
+        { "name": "onion", "quantity": 2, "category": "cat-fruits-vegetables", "location": null }
+      ]
+    },
+    {
+      "audio": "demo17.m4a",
+      "expected": [
+        { "name": "panadol", "category": "cat-toiletries-personal-care", "location": "Chemist Warehouse" },
+        { "name": "band aids", "category": "cat-toiletries-personal-care", "location": "Chemist Warehouse" }
+      ]
+    },
+    {
+      "audio": "demo18.m4a",
+      "expected": [
+        { "name": "peas", "category": "cat-frozen-foods", "location": "Coles", "note": "freezer" },
+        { "name": "ice cream", "category": "cat-frozen-foods", "location": "Coles" }
+      ]
+    },
+    {
+      "audio": "demo19.m4a",
+      "expected": [
+        { "name": "VB", "category": "cat-beverages", "location": "BWS" },
+        { "name": "cider", "category": "cat-beverages", "location": "BWS" }
+      ]
+    },
+    {
+      "audio": "demo20.m4a",
+      "expected": [
+        { "name": "screws", "location": "Bunnings", "note": "aisle 9" },
+        { "name": "hammer", "location": "Bunnings" }
+      ]
+    }
+  ]
+}

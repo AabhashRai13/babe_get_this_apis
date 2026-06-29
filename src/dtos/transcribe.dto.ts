@@ -39,7 +39,9 @@ export interface ShoppingItem {
   quantity: number | null;
   unit: string | null;
   category: ItemCategory;
-  // Preferences/conditions/substitutions only (e.g. "cage-free", "skip if unavailable").
+  // Canonical Australian store to buy/find the item, or null if none mentioned.
+  location: string | null;
+  // Preferences/conditions/substitutions/aisle/home-spot (e.g. "cage-free", "aisle 4").
   note: string | null;
 }
 

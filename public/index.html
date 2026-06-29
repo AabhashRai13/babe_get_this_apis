@@ -70,7 +70,7 @@
     <label for="audio">Audio file (field name: <code>audio</code>)</label>
     <input type="file" id="audio" accept="audio/*" />
     <p class="sub" style="margin-top:-6px">
-      Note: the STT service is stubbed, so any file returns the same canned result for now.
+      Pick an audio file, then Transcribe. Each file is sent to Whisper + Claude live.
     </p>
     <button id="trBtn">Upload &amp; transcribe</button>
     <div id="itemsBox"></div>
@@ -81,6 +81,10 @@
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
     const $ = (id) => document.getElementById(id);
+
+    // Escape model/transcript text before it goes into innerHTML below.
+    const esc = (s) =>
+      String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
     function setPill(el, ok, text) {
       el.className = "pill " + (ok ? "ok" : "err");
@@ -159,10 +163,10 @@
 
         if (res.ok && Array.isArray(data.items)) {
           const lis = data.items
-            .map((i) => `<li>${i.quantity} ${i.unit} ${i.name}</li>`)
+            .map((i) => `<li>${esc(i.quantity)} ${esc(i.unit)} ${esc(i.name)}</li>`)
             .join("");
           $("itemsBox").innerHTML =
-            `<strong>Transcript:</strong> ${data.transcript}<ul class="items">${lis}</ul>`;
+            `<strong>Transcript:</strong> ${esc(data.transcript)}<ul class="items">${lis}</ul>`;
         }
       } catch (e) {
         setPill($("trPill"), false, "error");

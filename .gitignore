@@ -5,8 +5,15 @@ dist/
 .DS_Store
 NOTES.md
 RULES.md
+
+# Agent / local tooling
+.claude/
+.codex/
+openspec/
 demo_audio/
 doc/brainstorm/
-openspec
-.codex
-.claude
+
+# Generated eval reports + cache (keep cases.json + run.ts, ignore the output)
+eval/report.json
+eval/report.md
+eval/raw.json
